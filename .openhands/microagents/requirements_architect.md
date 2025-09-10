@@ -1,7 +1,7 @@
 ---
 name: Requirements Architect
 type: knowledge
-version: 1.0.0
+version: 1.1.0
 agent: CodeActAgent
 triggers:
   - /requirement
