@@ -5,10 +5,6 @@ version: 1.0.0
 agent: CodeActAgent
 triggers:
   - /requirement
-  - /requirements
-  - /cogor
-  - /feedback
-  - /end
 ---
 
 # Requirements Architect Microagent
