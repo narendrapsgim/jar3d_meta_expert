@@ -18,6 +18,10 @@ from agents.agent_base import ReporterAgent
 from workflow_builders.meta_agent import build_workflow
 import time
 
+# Microservice integration
+from microservices.integration import initialize_microservices, get_microservice_integration
+from microservices.enhanced_agent_base import MicroServiceMetaAgent
+
 
 @cl.on_chat_start
 async def start():
@@ -29,17 +33,38 @@ async def start():
 
     cl.user_session.set("conversation_history", [])
 
+    # Initialize microservice integration
+    try:
+        microservice_integration = initialize_microservices()
+        cl.user_session.set("microservice_integration", microservice_integration)
+        print(colored("✅ Microservice integration initialized", 'green'))
+    except Exception as e:
+        print(colored(f"⚠️ Microservice integration failed: {e}", 'yellow'))
+        microservice_integration = None
+
     # IMPORTANT: Every Agent team must have a MetaAgent called "meta_agent" and a ReporterAgent called "reporter_agent".
     # IMPORTANT: server names can be "openai" or "anthropic"
     # IMPORTANT: for openai models use gpt-4o-2024-08-06 or gpt-4o-mini-2024-07-18
 
+    # Create enhanced meta agent with microservice support
+    if microservice_integration:
+        meta_agent = MicroServiceMetaAgent(
+            name="meta_agent",
+            registry=microservice_integration.registry,
+            server="openai",
+            model="gpt-4o-2024-08-06",
+            temperature=0.7
+        )
+    else:
+        # Fallback to regular meta agent
+        meta_agent = MetaAgent(
+            name="meta_agent",
+            server="openai",
+            model="gpt-4o-2024-08-06",
+            temperature=0.7
+        )
+
     # Add new agents here:
-    meta_agent = MetaAgent(
-        name="meta_agent",
-        server="openai",
-        model="gpt-4o-2024-08-06",
-        temperature=0.7
-    )
     serper_agent = SerperDevAgent(
         name="serper_agent",
         server="openai",
@@ -211,6 +236,16 @@ async def main(message: cl.Message):
     # Add new agents to the agent_team
     agent_team = [meta_agent, serper_agent, serper_shopping_agent, web_scraper_agent, offline_rag_websearch_agent, reporter_agent]
     # agent_team = [meta_agent, serper_agent, offline_rag_websearch_agent, reporter_agent]
+
+    # Enhance agents with microservice support if available
+    microservice_integration = cl.user_session.get("microservice_integration")
+    if microservice_integration:
+        try:
+            enhanced_team = microservice_integration.get_enhanced_agents_for_workflow(agent_team)
+            agent_team = enhanced_team
+            print(colored("✅ Agent team enhanced with microservice support", 'green'))
+        except Exception as e:
+            print(colored(f"⚠️ Agent enhancement failed: {e}", 'yellow'))
     configs = {"recursion_limit": 50, "configurable": {"thread_id": 42}}
 
     # Append the new user message to the conversation history

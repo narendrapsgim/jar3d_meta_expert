@@ -1,0 +1,38 @@
+# Dockerfile for API Gateway
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    python3-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy microservices code
+COPY microservices/ ./microservices/
+COPY agents/ ./agents/
+COPY models/ ./models/
+COPY utils/ ./utils/
+COPY config/ ./config/
+
+# Create non-root user
+RUN useradd -m -u 1000 gateway && chown -R gateway:gateway /app
+USER gateway
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the API gateway
+CMD ["python", "-m", "microservices.api_gateway"]

@@ -1,0 +1,16 @@
+capabilities:
+- web_search
+- information_retrieval
+container_image: null
+created_at: '2025-09-10T15:06:39.619522'
+dependencies: []
+description: Web search and information retrieval agent
+endpoint: http://web-search-service:8000
+environment_vars: {}
+name: web_search_agent
+prompt: You are a web search specialist. Perform comprehensive web searches and return
+  relevant results.
+resource_limits:
+  cpu: '0.5'
+  memory: 512Mi
+trigger_type: always

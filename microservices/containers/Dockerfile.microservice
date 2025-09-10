@@ -1,0 +1,33 @@
+# Dockerfile for Microservice Agents
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements-microservice.txt .
+RUN pip install --no-cache-dir -r requirements-microservice.txt
+
+# Copy microservice code
+COPY base_microservice.py .
+
+# Create non-root user
+RUN useradd -m -u 1000 microservice && chown -R microservice:microservice /app
+USER microservice
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the microservice
+CMD ["python", "base_microservice.py"]

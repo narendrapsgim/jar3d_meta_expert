@@ -1,0 +1,17 @@
+capabilities:
+- content_generation
+- writing
+- summarization
+container_image: null
+created_at: '2025-09-10T15:06:39.620297'
+dependencies: []
+description: Content generation and writing agent
+endpoint: http://content-generator-service:8000
+environment_vars: {}
+name: content_generator_agent
+prompt: You are a content creation specialist. Generate high-quality written content
+  for various purposes.
+resource_limits:
+  cpu: '0.5'
+  memory: 512Mi
+trigger_type: always

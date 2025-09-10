@@ -1,28 +1,120 @@
 # docker-compose.yml
-version: '2.4'  # Use version 2.x for this syntax
+version: '3.8'
 
 services:
+  # Main Jar3d application
   jar3d:
     build: .
     ports:
       - "8105:8105"
     environment:
-      - PYTHONUNBUFFERED=1  # Ensure Python output is not buffered
+      - PYTHONUNBUFFERED=1
       - LLM_SHERPA_SERVER=http://nlm-ingestor:5001/api/parseDocument?renderFormat=all&useNewIndentParser=yes&applyOcr=no&timeout=15
+      - MICROSERVICE_GATEWAY_URL=http://api-gateway:8000
     depends_on:
       - nlm-ingestor
+      - api-gateway
+      - redis
     volumes:
-      # - ./config:/app/config
       - ./fastembed_cache:/app/fastembed_cache
       - ./reranker_cache:/app/reranker_cache
-      # - ./agent_memory:/agent_memory
-    # environment:
-    #   - PYTHONUNBUFFERED=1  # Ensure Python output is not buffered
-    #   - LLM_SHERPA_SERVER=http://nlm-ingestor:5001/api/parseDocument?renderFormat=all&useNewIndentParser=yes
+      - ./.jar3d:/app/.jar3d
     mem_limit: 7.5g
     cpus: 5.0
+    networks:
+      - jar3d-network
 
+  # API Gateway for microservices
+  api-gateway:
+    build:
+      context: .
+      dockerfile: microservices/containers/Dockerfile.gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    volumes:
+      - ./.jar3d:/app/.jar3d
+    networks:
+      - jar3d-network
+
+  # Web Search Microservice
+  web-search-service:
+    build:
+      context: microservices/containers
+      dockerfile: Dockerfile.microservice
+    environment:
+      - SERVICE_TYPE=web_search
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8001:8000"
+    networks:
+      - jar3d-network
+
+  # Content Generator Microservice
+  content-generator-service:
+    build:
+      context: microservices/containers
+      dockerfile: Dockerfile.microservice
+    environment:
+      - SERVICE_TYPE=content_generator
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8002:8000"
+    networks:
+      - jar3d-network
+
+  # Data Analysis Microservice
+  data-analysis-service:
+    build:
+      context: microservices/containers
+      dockerfile: Dockerfile.microservice
+    environment:
+      - SERVICE_TYPE=data_analysis
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8003:8000"
+    networks:
+      - jar3d-network
+
+  # NLM Ingestor
   nlm-ingestor:
     image: ghcr.io/nlmatics/nlm-ingestor:latest
     ports:
       - "5001:5001"
+    networks:
+      - jar3d-network
+
+  # Redis for caching and message queuing
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - jar3d-network
+
+  # Service Discovery (Consul)
+  consul:
+    image: consul:1.15
+    ports:
+      - "8500:8500"
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    command: consul agent -dev -client=0.0.0.0
+    networks:
+      - jar3d-network
+
+volumes:
+  redis-data:
+
+networks:
+  jar3d-network:
+    driver: bridge

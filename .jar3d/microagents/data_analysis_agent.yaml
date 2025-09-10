@@ -1,0 +1,17 @@
+capabilities:
+- data_analysis
+- statistics
+- visualization
+container_image: null
+created_at: '2025-09-10T15:06:39.621047'
+dependencies: []
+description: Data analysis and processing agent
+endpoint: http://data-analysis-service:8000
+environment_vars: {}
+name: data_analysis_agent
+prompt: You are a data analysis specialist. Process, analyze, and derive insights
+  from various types of data.
+resource_limits:
+  cpu: '0.5'
+  memory: 512Mi
+trigger_type: always
